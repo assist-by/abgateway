@@ -1,3 +1,5 @@
+github.com/Lux-N-Sal/autro-notification v0.0.0-20240805124630-9732184a9eae h1:q+4Jp1vn5Ge1OIHmaBwx92c89spPjPoVNZPtQuyVD9U=
+github.com/Lux-N-Sal/autro-notification v0.0.0-20240805124630-9732184a9eae/go.mod h1:GrZ/MlkXE+kRObzjGw1d8koHe8Rfo732CURM/nfV3p8=
 github.com/Lux-N-Sal/autro-signal v0.0.0-20240730111314-cf37af118fb3 h1:pdU+BrvPpYsovyF+lxI1pJCM3s/NjBc0rtEMz79w9mA=
 github.com/Lux-N-Sal/autro-signal v0.0.0-20240730111314-cf37af118fb3/go.mod h1:n4SCesLF+nfYqjCuzNZMf3kWb4nOW+Xy33jy7CoUBV8=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
