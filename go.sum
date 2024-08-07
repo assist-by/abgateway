@@ -2,6 +2,8 @@ github.com/Lux-N-Sal/autro-notification v0.0.0-20240805124630-9732184a9eae h1:q+
 github.com/Lux-N-Sal/autro-notification v0.0.0-20240805124630-9732184a9eae/go.mod h1:GrZ/MlkXE+kRObzjGw1d8koHe8Rfo732CURM/nfV3p8=
 github.com/Lux-N-Sal/autro-signal v0.0.0-20240730111314-cf37af118fb3 h1:pdU+BrvPpYsovyF+lxI1pJCM3s/NjBc0rtEMz79w9mA=
 github.com/Lux-N-Sal/autro-signal v0.0.0-20240730111314-cf37af118fb3/go.mod h1:n4SCesLF+nfYqjCuzNZMf3kWb4nOW+Xy33jy7CoUBV8=
+github.com/Lux-N-Sal/autro-signal v0.0.0-20240807114558-df12e7ace531 h1:g3Oi8su7mTkXR+iVfxJlmuAQkl2hcVZRy57hMHIAoCQ=
+github.com/Lux-N-Sal/autro-signal v0.0.0-20240807114558-df12e7ace531/go.mod h1:zFe5ZfB1Uz015hvwNm4rtfb0StZK0Nqrigv361XNmLs=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 golang.org/x/net v0.25.0 h1:d/OCCoBEUq33pjydKrGQhw7IlUPI2Oylr+8qLx49kac=
