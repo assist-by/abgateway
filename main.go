@@ -23,13 +23,15 @@ type server struct {
 func (s *server) SendSignal(ctx context.Context, req *pb_signal.SignalRequest) (*pb_signal.SignalResponse, error) {
 	log.Printf("Received signal: %v", req)
 	description := fmt.Sprintf("Signal: %s for BTCUSDT at %v\n\n"+
-		"LONG  - {EMA: (bool: %t,value: %f), MACD: (bool: %t,value: %f), ParabolicSAR: (bool: %t,value: %f)}\n"+
-		"SHORT - {EMA: (bool: %t,value: %f), MACD: (bool: %t,value: %f), ParabolicSAR: (bool: %t,value: %f)}",
+		"[LONG]\n"+
+		"EMA200: %f(%t)\nMACD: %f(%t)\nParabolicSAR: %f(%t)\n"+
+		"[SHORT]\n"+
+		"EMA200: %f(%t)\nMACD: %f(%t)\nParabolicSAR: %f(%t)",
 		req.Signal, time.Unix(req.Timestamp, 0),
-		req.Conditions.Long[0].Condition, req.Conditions.Long[0].Value, req.Conditions.Long[1].Condition, req.Conditions.Long[1].Value,
-		req.Conditions.Long[2].Condition, req.Conditions.Long[2].Value,
-		req.Conditions.Short[0].Condition, req.Conditions.Short[0].Value, req.Conditions.Short[1].Condition, req.Conditions.Short[1].Value,
-		req.Conditions.Short[2].Condition, req.Conditions.Short[2].Value)
+		req.Conditions.Long[0].Value, req.Conditions.Long[0].Condition, req.Conditions.Long[1].Value, req.Conditions.Long[1].Condition,
+		req.Conditions.Long[2].Value, req.Conditions.Long[2].Condition,
+		req.Conditions.Short[0].Value, req.Conditions.Short[0].Condition, req.Conditions.Short[1].Value, req.Conditions.Short[1].Condition,
+		req.Conditions.Short[2].Value, req.Conditions.Short[2].Condition)
 
 	notificationReq := &pb_notification.NotificationRequest{
 		Title:       fmt.Sprintf("New Signal: %s", req.Signal),
