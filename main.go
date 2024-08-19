@@ -1,88 +1,137 @@
-// package main
-
-// import (
-// 	"context"
-// 	"fmt"
-// 	"log"
-// 	"net"
-// 	"os"
-// 	"time"
-
-// 	pb_notification "github.com/with-autro/autro-notification/proto"
-// 	pb_signal "github.com/with-autro/autro-signal/proto"
-// 	"google.golang.org/grpc"
-// 	"google.golang.org/grpc/credentials/insecure"
-// 	"google.golang.org/grpc/reflection"
-// )
-
-// type server struct {
-// 	pb_signal.UnimplementedSignalServiceServer
-// 	notificationClient pb_notification.NotificationServiceClient
-// }
-
-// func (s *server) SendSignal(ctx context.Context, req *pb_signal.SignalRequest) (*pb_signal.SignalResponse, error) {
-// 	log.Printf("Received signal: %v", req)
-// 	description := fmt.Sprintf("Signal: %s for BTCUSDT at %v\n\n"+
-// 		"[LONG]\n"+
-// 		"EMA200: %f(%t)\nMACD: %f(%t)\nParabolicSAR: %f(%t)\n"+
-// 		"[SHORT]\n"+
-// 		"EMA200: %f(%t)\nMACD: %f(%t)\nParabolicSAR: %f(%t)",
-// 		req.Signal, time.Unix(req.Timestamp, 0),
-// 		req.Conditions.Long[0].Value, req.Conditions.Long[0].Condition, req.Conditions.Long[1].Value, req.Conditions.Long[1].Condition,
-// 		req.Conditions.Long[2].Value, req.Conditions.Long[2].Condition,
-// 		req.Conditions.Short[0].Value, req.Conditions.Short[0].Condition, req.Conditions.Short[1].Value, req.Conditions.Short[1].Condition,
-// 		req.Conditions.Short[2].Value, req.Conditions.Short[2].Condition)
-
-// 	notificationReq := &pb_notification.NotificationRequest{
-// 		Title:       fmt.Sprintf("New Signal: %s", req.Signal),
-// 		Description: description,
-// 		Signal:      req.Signal,
-// 	}
-// 	notificationResp, err := s.notificationClient.SendNotification(ctx, notificationReq)
-// 	if err != nil {
-// 		log.Printf("Error sending notification: %v", err)
-// 		return &pb_signal.SignalResponse{Success: false, Message: "Failed to send notification"}, nil
-// 	}
-// 	return &pb_signal.SignalResponse{
-// 		Success: notificationResp.Success,
-// 		Message: notificationResp.Message,
-// 	}, nil
-// }
-
-// func main() {
-// 	port := os.Getenv("PORT")
-// 	if port == "" {
-// 		port = "50051"
-// 	}
-
-// 	notificationServiceAddr := os.Getenv("NOTIFICATION_SERVICE_ADDR")
-// 	if notificationServiceAddr == "" {
-// 		notificationServiceAddr = "notification-service:50052"
-// 	}
-
-// 	notificationConn, err := grpc.NewClient(notificationServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-// 	if err != nil {
-// 		log.Fatalf("Failed to connect to notification service: %v", err)
-// 	}
-// 	defer notificationConn.Close()
-
-// 	notificationClient := pb_notification.NewNotificationServiceClient(notificationConn)
-
-// 	lis, err := net.Listen("tcp", ":"+port)
-// 	if err != nil {
-// 		log.Fatalf("failed to listen: %v", err)
-// 	}
-
-// 	s := grpc.NewServer()
-// 	pb_signal.RegisterSignalServiceServer(s, &server{notificationClient: notificationClient})
-// 	reflection.Register(s)
-
-// 	log.Printf("API Gateway gRPC server listening on :%s", port)
-// 	if err := s.Serve(lis); err != nil {
-// 		log.Fatalf("failed to serve: %v", err)
-// 	}
-// }
-
 package main
 
-func main() {}
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	lib "github.com/with-autro/autro-library"
+	pb "github.com/with-autro/autro-price/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+)
+
+var (
+	host                string
+	port                string
+	serviceDiscoveryURL string
+	priceService        pb.PriceServiceClient
+)
+
+func init() {
+	host = os.Getenv("HOST")
+	if host == "" {
+		host = "localhost"
+	}
+
+	port = os.Getenv("Port")
+	if port == "" {
+		port = "8080"
+	}
+
+	serviceDiscoveryURL = "http://service-discovery:8500/register"
+}
+
+// API Gateway 등록 함수
+func registerService() {
+	service := lib.Service{
+		Name:    "api-gateway",
+		Address: fmt.Sprintf("%s:%s", os.Getenv("HOST"), os.Getenv("PORT")),
+	}
+
+	jsonData, err := json.Marshal(service)
+	if err != nil {
+		log.Fatalf("Failed to marshal service data: %v", err)
+	}
+
+	resp, err := http.Post(serviceDiscoveryURL, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Fatalf("Failed to register service: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Fatalf("Failed to register service. Status code: %d", resp.StatusCode)
+	}
+
+	log.Println("Service registered successfully.")
+}
+
+// 서비스의 주소 가져오는 함수
+func getServiceAddress(name string) (string, error) {
+	resp, err := http.Get(fmt.Sprintf("http://service-discovery:8500/services/%s", name))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("service not found")
+	}
+
+	var service lib.Service
+	if err := json.NewDecoder(resp.Body).Decode(&service); err != nil {
+		return "", err
+	}
+	return service.Address, nil
+}
+
+func initAutroPriceService() {
+	for {
+		addr, err := getServiceAddress("autro-price")
+		if err != nil {
+			log.Printf("Failed to get price service address: %v", err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			log.Printf("Failed to connect to price service: %v", err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		priceService = pb.NewPriceServiceClient(conn)
+		log.Println("Connected to price service")
+		return
+	}
+}
+
+// rest로 받으면 start gRPC를 쏘는 함수
+func handleStart(c *gin.Context) {
+	if priceService == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Price service not available"})
+		return
+	}
+
+	resp, err := priceService.Start(context.Background(), &pb.StartRequest{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to start price service: %v", err)})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": resp.Message})
+}
+
+func main() {
+	// Service Discovery에 등록
+	go registerService()
+
+	// Init autro-price
+	go initAutroPriceService()
+
+	r := gin.Default()
+	r.POST("/start", handleStart)
+
+	log.Printf("Starting server on: %s", port)
+	if err := r.Run(":" + port); err != nil {
+		log.Fatalf("Failed to run server: %v", err)
+	}
+}
