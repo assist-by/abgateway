@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -36,17 +35,14 @@ func init() {
 		port = "8080"
 	}
 
-	serviceDiscoveryURL = os.Getenv("SERVICE_DISCOVERY_URL")
-	if serviceDiscoveryURL == "" {
-		serviceDiscoveryURL = "http://autro-service-discovery:8500"
-	}
+	serviceDiscoveryURL = "http://service-discovery:8500/register"
 }
 
 // API Gateway 등록 함수
 func registerService() {
 	service := lib.Service{
-		Name:    "autro-api-gateway",
-		Address: fmt.Sprintf("%s:%s", host, port),
+		Name:    "api-gateway",
+		Address: fmt.Sprintf("%s:%s", os.Getenv("HOST"), os.Getenv("PORT")),
 	}
 
 	jsonData, err := json.Marshal(service)
@@ -54,9 +50,9 @@ func registerService() {
 		log.Fatalf("Failed to marshal service data: %v", err)
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s/register", serviceDiscoveryURL), "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(serviceDiscoveryURL, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Printf("Failed to register service: %v. URL: %s", err, serviceDiscoveryURL)
+		log.Fatalf("Failed to register service: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -69,19 +65,14 @@ func registerService() {
 
 // 서비스의 주소 가져오는 함수
 func getServiceAddress(name string) (string, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/services/%s", serviceDiscoveryURL, name))
+	resp, err := http.Get(fmt.Sprintf("http://service-discovery:8500/services/%s", name))
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %v", err)
-	}
-
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("service not found. Status Code: %d. Body: %s", resp.StatusCode, string(body))
+		return "", fmt.Errorf("service not found")
 	}
 
 	var service lib.Service
