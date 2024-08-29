@@ -1,137 +1,106 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
-	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/segmentio/kafka-go"
 	lib "github.com/with-autro/autro-library"
-	pb "github.com/with-autro/autro-price/proto"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
+	kafkaBroker         string
 	host                string
 	port                string
+	registrationTopic   string
 	serviceDiscoveryURL string
-	priceService        pb.PriceServiceClient
 )
 
 func init() {
-	host = os.Getenv("HOST")
-	if host == "" {
-		host = "localhost"
-	}
+	kafkaBroker = getEnv("KAFKA_BROKER", "kafka:9092")
+	host = getEnv("HOST", "autro-api-gateway")
+	port = getEnv("PORT", "50050")
+	registrationTopic = getEnv("REGISTRATION_TOPIC", "service-registration")
+	serviceDiscoveryURL = getEnv("SERVICE_DISCOVERY_URL", "http://autro-service-discovery:8500")
 
-	port = os.Getenv("Port")
-	if port == "" {
-		port = "8080"
-	}
-
-	serviceDiscoveryURL = "http://service-discovery:8500/register"
 }
 
-// API Gateway 등록 함수
-func registerService() {
+func getEnv(key, temp string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return temp
+}
+
+// Service Discovery에 등록하는 함수
+func registerService(writer *kafka.Writer) error {
 	service := lib.Service{
-		Name:    "api-gateway",
-		Address: fmt.Sprintf("%s:%s", os.Getenv("HOST"), os.Getenv("PORT")),
+		Name:    "autro-api-gateway",
+		Address: fmt.Sprintf("%s:%s", host, port),
 	}
 
 	jsonData, err := json.Marshal(service)
 	if err != nil {
-		log.Fatalf("Failed to marshal service data: %v", err)
+		return fmt.Errorf("error marshaling service data: %v", err)
 	}
 
-	resp, err := http.Post(serviceDiscoveryURL, "application/json", bytes.NewBuffer(jsonData))
+	err = writer.WriteMessages(context.Background(), kafka.Message{
+		Key:   []byte(service.Name),
+		Value: jsonData,
+	})
+
 	if err != nil {
-		log.Fatalf("Failed to register service: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		log.Fatalf("Failed to register service. Status code: %d", resp.StatusCode)
+		return fmt.Errorf("error sending registration message: %v", err)
 	}
 
-	log.Println("Service registered successfully.")
+	log.Println("Service registration message sent successfully")
+	return nil
 }
 
-// 서비스의 주소 가져오는 함수
-func getServiceAddress(name string) (string, error) {
-	resp, err := http.Get(fmt.Sprintf("http://service-discovery:8500/services/%s", name))
+// 서비스 등록 카프카 producer 생성
+func createRegistrationWriter() *kafka.Writer {
+	return kafka.NewWriter(
+		kafka.WriterConfig{
+			Brokers:     []string{kafkaBroker},
+			Topic:       registrationTopic,
+			MaxAttempts: 5,
+		})
+}
+
+// 서비스 주소 가져오는 API
+func getServiceAddress(serviceName string) (string, error) {
+	url :=
+		fmt.Sprintf("%s/services/$s", serviceDiscoveryURL, serviceName)
+	resp, err := http.Get(url)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error getting service info: %v", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("service not found")
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("error reading response body: %v", err)
 	}
 
 	var service lib.Service
-	if err := json.NewDecoder(resp.Body).Decode(&service); err != nil {
-		return "", err
+	err = json.Unmarshal(body, &service)
+	if err != nil {
+		return "", fmt.Errorf("error unmarshaling service data: %v", err)
 	}
+
 	return service.Address, nil
 }
 
-func initAutroPriceService() {
-	for {
-		addr, err := getServiceAddress("autro-price")
-		if err != nil {
-			log.Printf("Failed to get price service address: %v", err)
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			log.Printf("Failed to connect to price service: %v", err)
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		priceService = pb.NewPriceServiceClient(conn)
-		log.Println("Connected to price service")
-		return
-	}
-}
-
-// rest로 받으면 start gRPC를 쏘는 함수
-func handleStart(c *gin.Context) {
-	if priceService == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Price service not available"})
-		return
-	}
-
-	resp, err := priceService.Start(context.Background(), &pb.StartRequest{})
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to start price service: %v", err)})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": resp.Message})
-}
-
 func main() {
-	// Service Discovery에 등록
-	go registerService()
+	registrationWriter := createRegistrationWriter()
+	defer registrationWriter.Close()
 
-	// Init autro-price
-	go initAutroPriceService()
-
-	r := gin.Default()
-	r.POST("/start", handleStart)
-
-	log.Printf("Starting server on: %s", port)
-	if err := r.Run(":" + port); err != nil {
-		log.Fatalf("Failed to run server: %v", err)
+	if err := registerService(registrationWriter); err != nil {
+		log.Printf("Failed to register service: %v\n", err)
 	}
 }
