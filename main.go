@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gin-gonic/gin"
 	"github.com/segmentio/kafka-go"
 	lib "github.com/with-autro/autro-library"
 )
@@ -96,6 +97,30 @@ func getServiceAddress(serviceName string) (string, error) {
 	return service.Address, nil
 }
 
+func startAutroPrice(c *gin.Context) {
+	serviceAddress, err := getServiceAddress("autro-price")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get autro-price address: %v", err)})
+		return
+	}
+
+	url := fmt.Sprintf("http://%s/start", serviceAddress)
+	resp, err := http.Post(url, "application/json", nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to start autro-price service : %v", err)})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to read response from autro-price service: %v", err)})
+		return
+	}
+
+	c.Data(resp.StatusCode, resp.Header.Get("Content-Type"), body)
+}
+
 func main() {
 	registrationWriter := createRegistrationWriter()
 	defer registrationWriter.Close()
@@ -103,4 +128,19 @@ func main() {
 	if err := registerService(registrationWriter); err != nil {
 		log.Printf("Failed to register service: %v\n", err)
 	}
+
+	router := gin.Default()
+	router.POST("/start:autro-price", startAutroPrice)
+
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: router,
+	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to run server: %v", err)
+		}
+	}()
+
 }
