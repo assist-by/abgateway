@@ -8,6 +8,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/segmentio/kafka-go"
@@ -76,7 +79,7 @@ func createRegistrationWriter() *kafka.Writer {
 // 서비스 주소 가져오는 API
 func getServiceAddress(serviceName string) (string, error) {
 	url :=
-		fmt.Sprintf("%s/services/$s", serviceDiscoveryURL, serviceName)
+		fmt.Sprintf("%s/services/%s", serviceDiscoveryURL, serviceName)
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("error getting service info: %v", err)
@@ -143,4 +146,17 @@ func main() {
 		}
 	}()
 
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown:", err)
+	}
+
+	log.Println("Server exiting")
 }
