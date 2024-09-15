@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/segmentio/kafka-go"
+	// "github.com/segmentio/kafka-go"
+	kafka "github.com/with-autro/autro-api-gateway/pkg/kafka"
+
 	lib "github.com/with-autro/autro-library"
 )
 
@@ -66,16 +68,6 @@ func registerService(writer *kafka.Writer) error {
 	return nil
 }
 
-// 서비스 등록 카프카 producer 생성
-func createRegistrationWriter() *kafka.Writer {
-	return kafka.NewWriter(
-		kafka.WriterConfig{
-			Brokers:     []string{kafkaBroker},
-			Topic:       registrationTopic,
-			MaxAttempts: 5,
-		})
-}
-
 // 서비스 주소 가져오는 API
 func getServiceAddress(serviceName string) (string, error) {
 	url :=
@@ -125,7 +117,8 @@ func startAutroPrice(c *gin.Context) {
 }
 
 func main() {
-	registrationWriter := createRegistrationWriter()
+	// registrationWriter := createRegistrationWriter()
+	registrationWriter := kafka.NewWriter(kafkaBroker, registrationTopic)
 	defer registrationWriter.Close()
 
 	if err := registerService(registrationWriter); err != nil {
