@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	config "github.com/assist-by/autro-api-gateway/library"
+	config "github.com/assist-by/abgateway/library"
 	"github.com/gin-gonic/gin"
 )
 

@@ -13,7 +13,7 @@ import (
 // Service Discovery에 등록하는 함수
 func RegisterService(writer *kafka.Writer, host, port string) error {
 	service := lib.Service{
-		Name:    "autro-api-gateway",
+		Name:    "abgateway",
 		Address: fmt.Sprintf("%s:%s", host, port),
 	}
 

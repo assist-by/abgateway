@@ -1,4 +1,4 @@
-module github.com/assist-by/autro-api-gateway
+module github.com/assist-by/abgateway
 
 go 1.22.5
 

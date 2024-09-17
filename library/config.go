@@ -13,7 +13,7 @@ type Config struct {
 func Load() *Config {
 	return &Config{
 		KafkaBroker:         getEnv("KAFKA_BROKER", "kafka:9092"),
-		Host:                getEnv("HOST", "autro-api-gateway"),
+		Host:                getEnv("HOST", "abgateway"),
 		Port:                getEnv("PORT", "50050"),
 		RegistrationTopic:   getEnv("REGISTRATION_TOPIC", "service-registration"),
 		ServiceDiscoveryURL: getEnv("SERVICE_DISCOVERY_URL", "http://abready:8500"),
