@@ -6,10 +6,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	config "github.com/with-autro/autro-api-gateway/library"
-	kafka "github.com/with-autro/autro-api-gateway/pkg/kafka"
-	server "github.com/with-autro/autro-api-gateway/server"
-	service "github.com/with-autro/autro-api-gateway/service"
+	config "github.com/assist-by/autro-api-gateway/library"
+	kafka "github.com/assist-by/autro-api-gateway/pkg/kafka"
+	server "github.com/assist-by/autro-api-gateway/server"
+	service "github.com/assist-by/autro-api-gateway/service"
 )
 
 func main() {

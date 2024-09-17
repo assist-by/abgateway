@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log"
 
+	lib "github.com/assist-by/autro-library"
 	"github.com/segmentio/kafka-go"
-	lib "github.com/with-autro/autro-library"
 )
 
 // Service Discovery에 등록하는 함수

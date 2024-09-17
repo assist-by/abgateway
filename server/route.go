@@ -1,8 +1,8 @@
 package server
 
 import (
+	"github.com/assist-by/autro-api-gateway/service"
 	"github.com/gin-gonic/gin"
-	"github.com/with-autro/autro-api-gateway/service"
 )
 
 func SetupRoutes(router *gin.Engine, serviceDiscoveryURL string) {

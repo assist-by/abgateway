@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	config "github.com/assist-by/autro-api-gateway/library"
 	"github.com/gin-gonic/gin"
-	config "github.com/with-autro/autro-api-gateway/library"
 )
 
 type Server struct {

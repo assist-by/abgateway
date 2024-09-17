@@ -1,11 +1,11 @@
-module github.com/with-autro/autro-api-gateway
+module github.com/assist-by/autro-api-gateway
 
 go 1.22.5
 
 require (
+	github.com/assist-by/autro-library v0.1.9
 	github.com/gin-gonic/gin v1.10.0
 	github.com/segmentio/kafka-go v0.4.47
-	github.com/with-autro/autro-library v0.1.4
 )
 
 require (
