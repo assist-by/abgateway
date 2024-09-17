@@ -16,7 +16,7 @@ func Load() *Config {
 		Host:                getEnv("HOST", "autro-api-gateway"),
 		Port:                getEnv("PORT", "50050"),
 		RegistrationTopic:   getEnv("REGISTRATION_TOPIC", "service-registration"),
-		ServiceDiscoveryURL: getEnv("SERVICE_DISCOVERY_URL", "http://autro-service-discovery:8500"),
+		ServiceDiscoveryURL: getEnv("SERVICE_DISCOVERY_URL", "http://abready:8500"),
 	}
 }
 
