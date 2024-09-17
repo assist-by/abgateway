@@ -1,18 +1,14 @@
 package main
 
 import (
-	"context"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"github.com/gin-gonic/gin"
-	// "github.com/segmentio/kafka-go"
 	config "github.com/with-autro/autro-api-gateway/library"
 	kafka "github.com/with-autro/autro-api-gateway/pkg/kafka"
+	server "github.com/with-autro/autro-api-gateway/server"
 	service "github.com/with-autro/autro-api-gateway/service"
 )
 
@@ -26,16 +22,10 @@ func main() {
 		log.Printf("Failed to register service: %v\n", err)
 	}
 
-	router := gin.Default()
-	router.POST("/start:autro-price", service.StartPrice(&gin.Context, cfg.ServiceDiscoveryURL))
-
-	srv := &http.Server{
-		Addr:    ":" + port,
-		Handler: router,
-	}
+	srv := server.NewServer(cfg)
 
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.Run(); err != nil {
 			log.Fatalf("Failed to run server: %v", err)
 		}
 	}()
@@ -46,11 +36,8 @@ func main() {
 
 	log.Println("Shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(); err != nil {
 		log.Fatal("Server forced to shutdown:", err)
 	}
-
 	log.Println("Server exiting")
 }
