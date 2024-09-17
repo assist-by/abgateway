@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -18,30 +16,6 @@ import (
 	service "github.com/with-autro/autro-api-gateway/service"
 )
 
-func startAutroPrice(c *gin.Context) {
-	serviceAddress, err := service.GetServiceAddress("autro-price", cfg)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get autro-price address: %v", err)})
-		return
-	}
-
-	url := fmt.Sprintf("http://%s/start", serviceAddress)
-	resp, err := http.Post(url, "application/json", nil)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to start autro-price service : %v", err)})
-		return
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to read response from autro-price service: %v", err)})
-		return
-	}
-
-	c.Data(resp.StatusCode, resp.Header.Get("Content-Type"), body)
-}
-
 func main() {
 	cfg := config.Load()
 
@@ -53,7 +27,7 @@ func main() {
 	}
 
 	router := gin.Default()
-	router.POST("/start:autro-price", startAutroPrice)
+	router.POST("/start:autro-price", service.StartPrice(&gin.Context, cfg.ServiceDiscoveryURL))
 
 	srv := &http.Server{
 		Addr:    ":" + port,

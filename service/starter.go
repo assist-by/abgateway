@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func StartPrice(c *gin.Context) {
-	serviceAddress, err := GetServiceAddress("autro-price")
+func StartPrice(c *gin.Context, serviceDiscoveryURL string) {
+	serviceAddress, err := GetServiceAddress("autro-price", serviceDiscoveryURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get autro-price address: %v", err)})
 		return
