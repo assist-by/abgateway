@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	lib "github.com/assist-by/autro-library"
+	lib "github.com/assist-by/libStruct"
 	"github.com/segmentio/kafka-go"
 )
 

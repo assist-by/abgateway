@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	lib "github.com/assist-by/autro-library"
+	lib "github.com/assist-by/libStruct"
 )
 
 // 서비스 주소 가져오는 API
